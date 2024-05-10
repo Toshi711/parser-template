@@ -1,15 +1,15 @@
 import chalk from 'chalk';
-import queue from 'async/queue';
-import { DoneCallback } from 'async/queue';
+import {queue} from 'async';
 import { Puppeteer } from './puppeteer';
-
-const SITE = 'https://auto.ru/catalog/cars/all/?page_num=';
+import *  as cheerio from 'cheerio';
+import listItemsHandler from './items';
+const SITE = 'https://shikimori.one/animes/page/';
 const pages = 4;
 const concurrency = 10;
 const startTime = new Date();
 
 export const puppeteer = new Puppeteer();
-export const taskQueue = queue(async (task: Function, done: DoneCallback) => {
+export const taskQueue = queue(async (task: Function, done) => {
   try {
     await task();
     console.log(chalk.bold.magenta(`Task completed, tasks left: ${taskQueue.length()}\n`));
@@ -28,6 +28,14 @@ taskQueue.drain(() => {
 async function parsePage(url: string) {
   try {
     const pageContent = await puppeteer.getHTML(url);
+    const $ = cheerio.load(pageContent)
+    const pages: string[] = []
+
+    $('article a').each((i, element) => {
+      pages.push(String($(element).attr('href')))
+    })
+
+    listItemsHandler(pages)
   } catch (err) {
     console.error(chalk.red('An error has occurred: '), err);
   }
